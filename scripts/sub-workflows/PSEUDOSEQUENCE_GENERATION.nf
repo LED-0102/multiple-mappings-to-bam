@@ -1,0 +1,124 @@
+workflow PSEUDOSEQUENCE_GENERATION {
+    take:
+    files
+    tmpname
+
+    main:
+    ref = Channel.fromPath(params.ref)
+    mfas_txt = MAKE_TXT(tmpname)
+    output_ch = files.map { row -> 
+        row[0].name+'_mfas.mfa'
+    }
+    mfa_files = MAKE_MFA(files)
+    mfa_files = mfa_files.collect()
+    ls_ch=output_ch.toList()
+    mfas_txt = APPEND_MFA(ls_ch, mfas_txt)
+
+    ls_space = output_ch.toList()
+
+    output_aln = JOIN_DNA_INDELS(mfas_txt, ref, mfa_files, ls_space)
+
+    SUMMARISE_SNPS(output_aln, ref)
+}
+
+process MAKE_MFA {
+    input:
+    val files
+
+    output:
+    path "${runname}/${name}_mfas.mfa"
+
+    script:
+    runname = files[0].runname
+    name = files[0].name
+    """
+    mkdir -p ${runname}
+    touch ${runname}/${name}_mfas.mfa
+    """
+}
+process MAKE_TXT {
+    input:
+    val tmpname
+
+    output:
+    path("${tmpname}_mfas.txt")
+
+    script:
+    """
+    touch ${tmpname}_mfas.txt
+    """
+}
+process APPEND_MFA {
+    publishDir "${params.outdir}", mode: 'copy', overwrite: true
+
+    input:
+    val files
+    path txt
+
+    output:
+    path(txt)
+
+    script:
+    str = files.join('\n')
+    """
+    echo "${str}" >> ${txt}
+    """
+}
+
+process JOIN_DNA_INDELS {
+    publishDir "${params.outdir}", mode: 'copy'
+    container 'join_dna_files_with_indels'
+    input:
+    path (mfas_txt)
+    path ref
+    path mfa_files
+    val ls_space
+
+    output:
+    path("${output}.aln")
+
+    script:
+    output = params.output
+    str = ls_space.join(' ')
+    if (params.indels == true) {
+        """
+        python2 /opt/join_dna_files_with_indels/join_dna_files_with_indels.py -r ${ref} -o ${output}.aln -t ${mfas_txt}
+        """
+    } else if (params.incref == false) {
+        """
+        cat ${str} > ${output}.aln
+        """
+    } else {
+        """
+        cat ${ref} ${str} > ${output}.aln
+        """
+    }
+}
+
+process SUMMARISE_SNPS {
+    container 'summarise_snps'
+    input:
+    path output_aln
+    path ref
+
+    script:
+    summarystring = "python2 /opt/summarise_snps/summarise_snps.py -g -w -r "+ params.ref.split("/")[-1].split("\\.")[0] + " -o " + params.output + " -i " + params.output+".aln"
+    bootstrap = params.bootstrap
+
+    if (params.embl != "") {
+        summarystring = summarystring + " -e "+params.embl
+    }
+    if (params.alnfile == true) {
+        summarystring = summarystring + " -a"
+    }
+    if (params.tabfile == true) {
+        summarystring = summarystring + " -t"
+    }
+    if (params.raxml == true) {
+        summarystring = summarystring + " -p -l -b ${bootstrap}"
+    }
+
+    """
+    ${summarystring}
+    """
+}
