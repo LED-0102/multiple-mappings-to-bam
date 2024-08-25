@@ -9,7 +9,4 @@ RUN pip install --no-cache-dir \
     biopython==1.68 \
     pysam==0.12.0.1 
 
-COPY dependencies/modules /opt/join_dna_files_with_indels/modules
-COPY dependencies/join_dna_files_with_indels.py /opt/join_dna_files_with_indels/join_dna_files_with_indels.py
-
 CMD ["/bin/bash"]

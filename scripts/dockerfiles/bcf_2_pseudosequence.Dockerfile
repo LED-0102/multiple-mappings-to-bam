@@ -11,6 +11,4 @@ RUN pip install --no-cache-dir \
     numpy \
     biopython==1.68
 
-COPY dependencies/bcf_2_pseudosequence.py /opt/bcf_2_pseudosequence/bcf_2_pseudosequence.py
-
 CMD ["/bin/bash"]

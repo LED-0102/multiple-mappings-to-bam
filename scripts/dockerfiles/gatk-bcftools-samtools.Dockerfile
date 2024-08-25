@@ -17,7 +17,6 @@ RUN mkdir /opt/gatk && \
     rm /opt/gatk/gatk-4.5.0.0.zip
 
 # Stage 2: Runtime Stage
-# FROM quay.io/ssd28/gsoc-experimental/bcf_2_pseudosequence:0.0.1
 FROM quay.io/ssd28/gsoc-experimental/bcf_2_pseudosequence:0.0.2
 
 # Install runtime dependencies
